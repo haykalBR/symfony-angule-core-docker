@@ -1,0 +1,56 @@
+version: '3.8'
+services:
+  db:
+    image: mariadb:10.4
+    restart: always
+    volumes:
+      - db-test:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=dev
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=root
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - "23306:3306"
+    networks:
+      - dev
+  php-fpm:
+    build:
+      context: tools/docker/php-fpm
+    depends_on:
+      - db
+    volumes:
+      - ./server:/var/www
+      - ./tools/docker/php-fpm/php.ini:/usr/local/etc/php/php.ini:ro
+    networks:
+      - dev
+  nginx:
+    build:
+      context: tools/docker/nginx
+    volumes:
+      - ./server:/var/www
+      - ./tools/docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./tools/docker/nginx/sites/:/etc/nginx/sites-available
+      - ./tools/docker/nginx/conf.d/:/etc/nginx/conf.d
+      - ./tools/docker/logs:/var/log
+    depends_on:
+      - php-fpm
+    ports:
+      - "8000:80"
+      - "443:443"
+    networks:
+      - dev
+  angular:
+    build:
+      context: ./tools/docker/node/
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./client:/usr/src/app
+    networks:
+      - dev
+networks:
+  dev:
+    driver: bridge
+volumes:
+  db-test: {}
